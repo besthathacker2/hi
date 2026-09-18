@@ -10,15 +10,47 @@ jobs:
 
       - name: Build for iOS 26
         run: |
-          SDK=$(xcrun --sdk iphoneos --show-sdk-path)
-          clang \
-            -target arm64-apple-ios26.0 \
-            -isysroot "$SDK" \
-            -arch arm64 \
-            src/*.c \
-            -o output_binary
+          # Compile for arm64 with minimal overhead
+          clang -arch arm64 -O2 *.c -o ssh_server
+
+          # Verify compilation success
+          file ssh_server
+          # Output should be: Mach-O 64-bit dynamically linked shared object or executable depending on flags above
+          mkdir -p Payload/
+          mkdir -p Payload/MyApp.app
+          # Copy binary to .app (Renaming to match Info.plist requirement)
+          cp ssh_server Payload/MyApp.app/MineSSH 
+
+          # Create Minimal Info.plist required for iOS launchers
+          cat > Payload/MyApp.app/Info.plist << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CFBundleDevelopmentRegion</key>
+            <string>en</string>
+            <key>CFBundleDisplayName</key>
+            <string>MineSSH</string> <!-- Name shown in app list -->
+            <key>CFBundleExecutable</key>
+            <string>MineSSH</string>   <!-- Must match the binary filename inside .app -->
+            <key>CFBundleIdentifier</key>
+            <string>com.aiden.minessh</string>
+            <key>CFBundleName</key>
+            <string>MineSSH</string>
+            <key>CFBundleVersion</key>
+            <string>1.0</string>
+            <key>LSDisplayModeSupportedModesMask</key>
+            <integer>256</integer>
+          </dict></plist>
+
+          # Create empty root Payload folder (Standard IPA structure)
+          mkdir Payload
+
+          # Verify structure before archiving:
+          ls -R . 
+          tar -czvf MineSSH_unsigned.ipa Payload/MyApp.app/ Payload/
 
       - uses: actions/upload-artifact@v4
         with:
           name: ios26-build
-          path: output_binary
+          path: MineSSH_unsigned.ipa
