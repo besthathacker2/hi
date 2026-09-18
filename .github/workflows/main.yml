@@ -11,7 +11,7 @@ jobs:
       - name: Build for iOS 26
         run: |
           # Compile for arm64 with minimal overhead
-          clang -arch arm64 -O2 exploit.c -o ssh_server
+          clang -arch arm64 -O2 src/exploit.c -o ssh_server
 
           # Verify compilation success
           file ssh_server
